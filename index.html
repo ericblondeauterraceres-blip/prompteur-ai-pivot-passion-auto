@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI PIVOT — Desk Présentateur v5.2 — Rodolphe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --c-bg:      #030303;
+  --c-surface: #090909;
+  --c-border:  #191919;
+  --c-muted:   #444;
+  --c-body:    #888;
+  --c-hi:      #ffffff;
+  --accent:    #818CF8;
+  --fs:        28px;
+  --font-script: 'JetBrains Mono', monospace;
+  --font-ui:     'Inter', sans-serif;
+}
+
+html, body { height: 100%; overflow: hidden; background: var(--c-bg); color: var(--c-hi); font-family: var(--font-ui); }
+
+/* ═══ LAYOUT ═══ */
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* TOP BAR */
+#topbar {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px; height: 46px;
+  background: var(--c-surface);
+  border-bottom: 2px solid var(--accent);
+  gap: 12px;
+  transition: border-color .3s;
+}
+#topbar-left  { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+#topbar-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+
+.badge {
+  font-family: var(--font-ui); font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: .15em;
+  padding: 3px 9px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+}
+#slide-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#slide-phase { font-size: 11px; color: var(--c-muted); white-space: nowrap; flex-shrink: 0; }
+#slide-dur   { font-family: var(--font-script); font-size: 11px; color: var(--c-muted); flex-shrink: 0; }
+#counter     { font-family: var(--font-script); font-size: 11px; color: var(--c-muted); }
+
+.btn {
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  padding: 4px 9px; border-radius: 4px; border: 1px solid var(--c-border);
+  background: #111; color: var(--c-muted); cursor: pointer; transition: all .12s; white-space: nowrap;
+}
+.btn:hover { background: #1a1a1a; color: var(--c-body); }
+#btn-scroll.on { color: #000; border-color: transparent; }
+
+/* PROGRESS BAR */
+#progress-wrap { flex-shrink: 0; height: 2px; background: #0d0d0d; }
+#progress-fill { height: 100%; transition: width .25s ease; }
+
+/* SLIDE NAV */
+#slidenav {
+  flex-shrink: 0; display: flex; align-items: center; gap: 3px;
+  padding: 5px 18px; overflow-x: auto; background: #060606;
+  border-bottom: 1px solid var(--c-border); scrollbar-width: none;
+}
+#slidenav::-webkit-scrollbar { display: none; }
+.nav-pill {
+  flex-shrink: 0; font-family: var(--font-ui); font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: .04em;
+  padding: 4px 10px; border-radius: 3px; border: none; cursor: pointer;
+  background: #0f0f0f; color: var(--c-muted); transition: all .12s;
+}
+.nav-pill:hover { color: var(--c-body); }
+.nav-pill.on { color: #000; }
+
+/* BODY */
+#body { flex: 1; display: flex; overflow: hidden; }
+
+/* ─ LEFT: CUE PANEL ─ */
+#left {
+  flex-shrink: 0; width: 270px; display: flex; flex-direction: column; overflow: hidden;
+  background: #060606; border-right: 1px solid var(--c-border);
+}
+#cue-hd {
+  flex-shrink: 0; padding: 9px 13px;
+  border-bottom: 1px solid var(--c-border);
+  font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .2em;
+}
+#cue-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 5px; scrollbar-width: thin; scrollbar-color: #1a1a1a transparent; }
+.cue-card { display: flex; gap: 7px; padding: 7px 9px; border-radius: 5px; background: #0e0e0e; border: 1px solid #181818; }
+.cue-dot  { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; margin-top: 4px; }
+.cue-type { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 2px; }
+.cue-text { font-size: 11px; line-height: 1.45; }
+
+/* objection box */
+#obj-box { margin: 6px 8px; flex-shrink: 0; border-radius: 5px; overflow: hidden; border: 1px solid #F59E0B2a; }
+#obj-toggle {
+  width: 100%; padding: 7px 10px; display: flex; align-items: center; justify-content: space-between;
+  background: #130e00; cursor: pointer; border: none; gap: 8px;
+}
+.obj-label { font-size: 9px; font-weight: 900; color: #F59E0B; letter-spacing: .1em; }
+.obj-arrow { font-size: 9px; color: #F59E0B66; }
+#obj-body { display: none; padding: 8px 10px; background: #0c0900; }
+#obj-body.open { display: block; }
+#obj-trigger { font-size: 10px; font-weight: 700; color: #FCD34D; margin-bottom: 5px; }
+#obj-reply   { font-size: 11px; line-height: 1.55; color: #FDE68A; font-style: italic; }
+
+/* shortcuts */
+#shortcuts { flex-shrink: 0; padding: 8px 12px; border-top: 1px solid var(--c-border); display: flex; flex-wrap: wrap; gap: 5px 10px; }
+.sk { display: flex; align-items: center; gap: 4px; }
+kbd { font-family: var(--font-script); font-size: 9px; padding: 1px 4px; border-radius: 3px; background: #111; color: #444; border: 1px solid #222; }
+.sk-lbl { font-size: 9px; color: #2a2a2a; }
+
+/* ─ CENTER: TELEPROMPTER ─ */
+#tp {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;
+  background: var(--c-bg);
+}
+#tp-phase { flex-shrink: 0; padding: 10px 44px 4px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .25em; }
+
+.fade-t { position: absolute; top: 40px; left: 0; right: 0; height: 40px; pointer-events: none; z-index: 5; background: linear-gradient(to bottom, var(--c-bg), transparent); }
+.fade-b { position: absolute; bottom: 46px; left: 0; right: 0; height: 100px; pointer-events: none; z-index: 5; background: linear-gradient(to top, var(--c-bg) 40%, transparent); }
+
+#script { flex: 1; overflow-y: auto; padding: 40px 44px 180px; scrollbar-width: none; }
+#script::-webkit-scrollbar { display: none; }
+
+/* LINES */
+.line {
+  font-family: var(--font-script);
+  font-size: var(--fs);
+  font-weight: 700;
+  line-height: 1.5;
+  padding: 2px 0 2px 12px;
+  border-left: 4px solid transparent;
+  border-radius: 0 5px 5px 0;
+  cursor: pointer;
+  transition: color .1s, border-color .1s, background .1s;
+  user-select: none;
+}
+.line.empty    { height: .9em; cursor: default; pointer-events: none; }
+.line.sep {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0; border: none;
+  font-family: var(--font-ui); font-size: 11px; font-style: italic;
+  color: #282828; font-weight: 400; cursor: default; pointer-events: none;
+}
+.line.sep::before, .line.sep::after { content: ''; flex: 1; height: 1px; background: #181818; }
+
+.line.past   { color: #383838; border-color: transparent; }
+.line.future { color: #a0a0a0; border-color: transparent; }
+.line.future.q { color: #FCD34D; }
+.line.active { color: #fff !important; font-weight: 800; }
+
+/* ─ BOTTOM NAV ─ */
+#tp-bottom {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 44px 14px; border-top: 1px solid var(--c-border);
+}
+.nav-big {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 900;
+  padding: 7px 18px; border-radius: 6px; border: 1px solid var(--c-border);
+  background: #111; color: var(--c-muted); cursor: pointer; transition: all .12s;
+}
+.nav-big:hover:not(:disabled) { color: var(--c-hi); }
+.nav-big:disabled { opacity: .2; cursor: default; }
+.nav-big.primary  { border-color: transparent; color: #000; }
+.line-ctl { display: flex; align-items: center; gap: 8px; }
+.lc-btn {
+  width: 26px; height: 26px; border-radius: 4px;
+  background: #111; border: 1px solid var(--c-border); color: var(--c-muted);
+  font-size: 11px; cursor: pointer; transition: all .12s;
+  display: flex; align-items: center; justify-content: center;
+}
+.lc-btn:hover { color: var(--c-hi); }
+#line-ctr { font-family: var(--font-script); font-size: 10px; color: #282828; min-width: 44px; text-align: center; }
+
+/* ─ CONTEXT PANEL ─ */
+#ctx-panel {
+  flex-shrink: 0; width: 260px; display: flex; flex-direction: column; overflow: hidden;
+  background: #060606; border-left: 1px solid var(--c-border);
+}
+#ctx-hd {
+  flex-shrink: 0; padding: 9px 13px; border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+#ctx-hd-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .2em; }
+#ctx-hd-badge {
+  font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em;
+  padding: 2px 7px; border-radius: 3px;
+}
+#ctx-body { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: #1a1a1a transparent; }
+.ctx-step {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 9px 10px; border-radius: 5px;
+  background: #0e0e0e; border-left: 3px solid transparent;
+}
+.ctx-step-num { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 1px; }
+.ctx-step-title { font-size: 12px; font-weight: 700; line-height: 1.35; }
+.ctx-step-desc { font-size: 11px; line-height: 1.5; color: #666; margin-top: 2px; }
+
+/* ─ RIGHT: MINIMAP ─ */
+#minimap {
+  flex-shrink: 0; width: 42px; overflow-y: auto;
+  background: #050505; border-left: 1px solid var(--c-border);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 7px 0; gap: 3px; scrollbar-width: none;
+}
+#minimap::-webkit-scrollbar { display: none; }
+.mm {
+  width: 28px; height: 28px; border-radius: 4px;
+  font-family: var(--font-ui); font-size: 9px; font-weight: 900;
+  border: 1px solid transparent; cursor: pointer; transition: all .1s;
+  display: flex; align-items: center; justify-content: center;
+  background: #0c0c0c; color: #252525;
+}
+.mm:hover { color: var(--c-muted); }
+.mm.on { color: #000; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="topbar">
+    <div id="topbar-left">
+      <span class="badge" id="tb-badge">INTRO</span>
+      <span id="slide-title">AI PIVOT — Ouverture</span>
+      <span id="slide-phase">AVANT LE SLIDE</span>
+      <span id="slide-dur">⏱ 5 min</span>
+    </div>
+    <div id="topbar-right">
+      <span id="counter">1/21</span>
+      <button class="btn" id="btn-sm">A−</button>
+      <button class="btn" id="btn-lg">A+</button>
+      <button class="btn" id="btn-scroll">▶ DÉFILE</button>
+      <input type="range" id="speed-range" min="8" max="80" value="30" style="width:64px;display:none;accent-color:var(--accent);">
+      <button class="btn" id="btn-fs">⛶</button>
+    </div>
+  </div>
+
+  <div id="progress-wrap"><div id="progress-fill"></div></div>
+  <div id="slidenav"></div>
+
+  <div id="body">
+    <aside id="left">
+      <div id="cue-hd" style="color:var(--accent)">◎ Repères scène</div>
+      <div id="cue-list"></div>
+      <div id="obj-box" style="display:none">
+        <button id="obj-toggle">
+          <span class="obj-label">⚡ SI OBJECTION</span>
+          <span class="obj-arrow" id="obj-arr">▼</span>
+        </button>
+        <div id="obj-body">
+          <div id="obj-trigger"></div>
+          <div id="obj-reply"></div>
+        </div>
+      </div>
+      <div id="shortcuts">
+        <div class="sk"><kbd>←→</kbd><span class="sk-lbl">slide</span></div>
+        <div class="sk"><kbd>↑↓</kbd><span class="sk-lbl">ligne</span></div>
+        <div class="sk"><kbd>Espace</kbd><span class="sk-lbl">suivant</span></div>
+        <div class="sk"><kbd>S</kbd><span class="sk-lbl">scroll</span></div>
+        <div class="sk"><kbd>A</kbd><span class="sk-lbl">objection</span></div>
+        <div class="sk"><kbd>+/−</kbd><span class="sk-lbl">taille</span></div>
+        <div class="sk"><kbd>F</kbd><span class="sk-lbl">plein écran</span></div>
+      </div>
+    </aside>
+
+    <div id="tp">
+      <div id="tp-phase"></div>
+      <div class="fade-t"></div>
+      <div id="script"></div>
+      <div class="fade-b"></div>
+      <div id="tp-bottom">
+        <button class="nav-big" id="btn-prev">← PRÉC.</button>
+        <div class="line-ctl">
+          <button class="lc-btn" id="btn-lu">↑</button>
+          <span id="line-ctr">— / —</span>
+          <button class="lc-btn" id="btn-ld">↓</button>
+        </div>
+        <button class="nav-big primary" id="btn-next">SUIV. →</button>
+      </div>
+    </div>
+
+    <aside id="ctx-panel">
+      <div id="ctx-hd">
+        <span id="ctx-hd-label" style="color:#818CF8">◉ Contexte du slide</span>
+        <span id="ctx-hd-badge">Avant ce script</span>
+      </div>
+      <div id="ctx-body"></div>
+    </aside>
+    <aside id="minimap"></aside>
+  </div>
+</div>
+
+<script>
+const SEQ_COLOR = {
+  intro:'#818CF8', s1:'#F87171', s2:'#FBBF24',
+  s3:'#34D399', demo:'#34D399', atelier:'#A78BFA', close:'#A78BFA'
+};
+const CUE_META = {
+  action:  {dot:'#60A5FA',lbl:'▶ FAIRE',    tc:'#93C5FD'},
+  question:{dot:'#FCD34D',lbl:'? QUESTION', tc:'#FDE68A'},
+  story:   {dot:'#C084FC',lbl:'◈ HISTOIRE', tc:'#E9D5FF'},
+  stat:    {dot:'#34D399',lbl:'# CHIFFRE',  tc:'#6EE7B7'},
+  pause:   {dot:'#64748B',lbl:'⏸ PAUSE',    tc:'#94A3B8'},
+  rule:    {dot:'#F87171',lbl:'⚠ RÈGLE',    tc:'#FCA5A5'},
+  message: {dot:'#FB923C',lbl:'! MESSAGE',  tc:'#FED7AA'},
+  fact:    {dot:'#2DD4BF',lbl:'→ FAIT',     tc:'#99F6E4'},
+};
+
+
+
+
+const SLIDES=[
+/* 0 */ {id:0,label:'INTRO',title:'AI PIVOT — Ouverture',phase:'AVANT LE SLIDE',dur:'5 min',seq:'intro',
+ctx:{title:"Ce qui vient de se passer",steps:[["Tu es entré dans la salle","Pas de slide projeté. Tu regardes la salle. Tu attends le silence."],["Tu poses les 2 questions à main levée","1) Qui a un abonnement IA payant ? 2) Qui connaît VibeCoding / RAG / MCP ?"],["La salle a répondu","Tu as observé le clivage. Tu souris. C'est ça le déclic."]]},
+cues:[{t:'action',s:'Entrer. Pas de slide. Regarder la salle. Attendre le silence.'},{t:'action',s:'Laisser le silence s\'installer. Pas bouger.'},{t:'question',s:'Main levée : qui a un abonnement IA payant ?'},{t:'pause',s:'Observer. Compter mentalement. Laisser le malaise s\'installer.'},{t:'question',s:'Qui connaît VibeCoding, RAG, MCP, Agent IA ?'},{t:'action',s:'Sourire. Créer le clivage. Laisser le groupe se regarder.'}],
+objection:{trigger:'Si quelqu\'un balance un terme technique — VibeCoding, OpenClaw, MCP',reply:'Parfait, vous êtes en avance. 5 questions rapides pour calibrer : 1) Utilisé une IA perso ? 2) Payé un abonnement ? 3) Suivi une formation prompt ? 4) GPTs/RAG/MCP ? 5) Projet IA structuré en entreprise ? Ça prend 30 secondes. Et après, on avance.'},
+lines:['Bonjour à tout le monde.','','Voilà.','','Je ne vais pas vous parler de technologie.','Je vais vous parler de votre business.','','Vous êtes directeurs, responsables de pôle.','Votre sujet, c\'est le CA, la marge,','la pérennité de ce que vous avez construit.','','Ce que vous venez de vivre là, en 30 secondes —','c\'est déjà le premier enseignement.','','Regardez autour de vous.','Il y a des gens qui ont la main levée.','Il y a des gens qui ne l\'ont pas.','','Dans 18 mois,','cette différence, elle sera visible sur les résultats.','','Pas pour faire peur.','Pour donner envie d\'être dans le bon groupe.','','— SONDAGE — 5 QUESTIONS —','','On fait ça vite, à main levée.','','1. Vous avez déjà utilisé une IA personnellement ?','   ChatGPT, Copilot, autre chose ?','','2. Vous avez déjà payé pour une solution IA ?','   Abonnement, licence, développement interne ?','','3. Vous avez suivi une formation ou un atelier sur l\'IA ?','','4. Vous connaissez les termes GPTs, RAG, MCP ?','','5. Votre boîte a lancé un projet IA structuré ?','','— VOCABULAIRE — Ce qu\'on entend partout —','','GPT : Generative Pre-trained Transformer.','GPTs : des assistants spécialisés dans ChatGPT.','','RAG : l\'IA qui va chercher dans VOS documents','à vous — pas sur le web. Votre base privée.','','MCP : le tuyau qui connecte l\'IA à vos outils métiers.','','Skills : vos savoir-faire, encapsulés, automatisables.','','Et la chaîne qui change tout :','Expert métier → SOP → Prompt → Skill → Agent.','','On démarre.']},
+
+/* 1 */ {id:1,label:'CONTEXTE',title:'Pourquoi Maintenant',phase:'INTRODUCTION',dur:'8 min',seq:'intro',
+ctx:{title:"Ce qui vient de se passer",steps:[["INTRO terminé","Le clivage est posé. La salle est attentive."],["Tu enchaînes sur l'urgence","Pas de pause. L'histoire de Dario Amodei en premier."],["Ton : sobre, factuel, direct","Des faits. Et une question finale qui reste dans la tête."]]},
+cues:[{t:'stat',s:'80% des acheteurs : recherche en ligne AVANT de venir'},{t:'fact',s:'AutoTrader UK : IA annonces → +23% clics'},{t:'fact',s:'Stellantis SAV : −40% temps de diagnostic'},{t:'question',s:'La tâche la plus répétitive dans ton équipe — laquelle ?'}],
+lines:['Une histoire.','','Dario Amodei. PDG d\'Anthropic.','L\'un des patrons d\'IA les plus influents au monde.','','Son fils décide de ne pas aller à l\'université.','','Sa réaction de père ? Il dit :','«Ce que mon fils apprendrait en première année','sera obsolète bien avant qu\'il obtienne son diplôme.»','','Voilà où on en est.','','Il y a 30 ans, un Bac+5, ça vous assurait','20 à 30 ans de savoir pertinent.','','Aujourd\'hui : 2 ans.','Bac+5 en 2026 — vous avez 3 ans de retard','avant même d\'avoir le diplôme en main.','','Attention — on parle du savoir, pas du savoir-faire.','Pas du savoir-être.','Ces deux-là, l\'IA ne les remplace pas.','Pas encore.','','Et l\'ironie, la vraie ironie —','c\'est qu\'on attend d\'avoir «le temps» pour se former à l\'IA.','Alors que c\'est exactement l\'IA qui va nous redonner ce temps.','','Votre marché se transforme.','','Vos clients arrivent informés.','80% ont fait leurs recherches en ligne','avant de mettre un pied chez vous.','','Vos concurrents testent.','','AutoTrader, au Royaume-Uni —','ils ont utilisé l\'IA pour optimiser leurs annonces.','Résultat : +23% de clics.','','Stellantis.','L\'IA analyse les symptômes des pannes avant l\'atelier.','Résultat : −40% de temps de diagnostic.','','Pas dans 5 ans.','Il y a 2 ans.','','C\'est pas «si».','C\'est «quand».','Et surtout — c\'est «comment».','','Gardez ça en tête pour la suite :','quelle est la tâche qui vous prend le plus de temps','et qui se répète chaque semaine ?','','On va y revenir.']},
+
+/* 2 */ {id:2,label:'PLAN',title:'Comment on passe ces 4 heures',phase:'CADRAGE',dur:'5 min',seq:'intro',
+ctx:{title:"Ce qui vient de se passer",steps:[["Introduction posée","Contexte + urgence. La salle est dans le bon état d'esprit."],["Sortez les téléphones maintenant","Demandé dès ce slide."],["Ton : simple, direct, pratico-pratique","Pas de présentation pompeuse. Juste le plan."]]},
+cues:[{t:'action',s:'Pointer visuellement les 3 séquences'},{t:'rule',s:'Questions bienvenues à tout moment — pas de main levée poliment'},{t:'action',s:'Sortez vos téléphones — on travaille avec eux aujourd\'hui'}],
+lines:['Voilà comment on va travailler.','','Pas de cours magistral.','Pas de PowerPoint à sens unique.','','On alterne.','Des apports courts, des démos, des exercices.','Vous testez sur vos téléphones.','','3 séquences.','Chacune construite autour d\'une urgence.','','Séquence 1 : l\'urgence de SE POSITIONNER.','Séquence 2 : l\'urgence de COMPRENDRE comment ça fonctionne.','Séquence 3 : l\'urgence d\'AGIR — concrètement, maintenant.','','Plus un atelier.','Vous testez sur VOS cas, pas des exemples génériques.','','Les questions : posez-les toutes.','Si c\'est prévu plus tard, je vous le dis.','Mais n\'attendez pas.','','Et maintenant :','sortez vos téléphones.','On va s\'en servir de suite.']},
+
+/* 3 — VITESSE — CITATION FAR WEST INSÉRÉE */ {id:3,label:'VITESSE',title:'Le Choc de la Vitesse',phase:'INTRO — Déstabilisation',dur:'10 min',seq:'intro',
+ctx:{title:"Ce qui vient de se passer",steps:[["Plan affiché, téléphones sortis","La salle sait ce qui l'attend."],["Tu déstabilises — puis tu pivotes vers le Far West","Le constat d'abord. Puis la promesse. Enchaîner sans pause."],["La citation Far West — ton Rodolphe brut","Dire la vérité. Sans ménagement. Puis rassurer immédiatement."]]},
+cues:[{t:'stat',s:'ChatGPT : 100M users en 3 mois. Netflix : 3,5 ans.'},{t:'story',s:'OpenClaw : développeur + café Starbucks + 1 milliard de dollars'},{t:'message',s:'«Vous n\'avez pas les bases. Vous n\'êtes pas assez curieux. Et c\'est normal.»'},{t:'rule',s:'ON NE REGARDE PAS LES BOUTONS DE CHATGPT — on regarde comment accélérer votre EBE/ETP'}],
+objection:{trigger:'Si quelqu\'un parle d\'OpenClaw ou d\'IA agentique avancée',reply:'Exactement — vous êtes déjà en avance. Ce qu\'on décrit là, c\'est l\'IA agentique. Ce matin on pose les fondations. Parlons-en à la pause.'},
+lines:['Novembre 2022.','ChatGPT sort.','','100 millions d\'utilisateurs en 3 mois.','Netflix a mis 3 ans et demi pour faire pareil.','','C\'est pas une stat.','C\'est un signal.','Le monde a dit OUI à l\'IA. En temps réel.','','Une histoire maintenant.','','OpenClaw — début 2026.','Un développeur boit son café à Starbucks.','Il en a marre de valider','chaque micro-tâche de ses agents IA.','Il code sans savoir coder — le vibe coding.','Il crée un contremaître IA :','un agent qui supervise toute une équipe d\'agents.','','Il dépose le code gratuitement sur GitHub.','3 mois plus tard —','Sam Altman, PDG d\'OpenAI,','rachète la structure pour 1 milliard de dollars.','','La prime ne va plus à l\'expert technique.','Elle va à celui qui imagine','comment l\'intégrer dans son business.','','1 an dans l\'IA = 7 ans d\'évolution technologique.','Si vous partez une semaine en vacances,','vous revenez obsolète.','','— LE PIVOT —','','Vous n\'avez pas les bases de cette technologie.','Et vous n\'êtes pas assez curieux.','','Mais rassurez-vous — c\'est normal.','C\'est exactement pour ça que vous m\'avez fait venir.','','Face à ce Far West,','on ne va pas regarder les boutons de ChatGPT.','On va regarder comment accélérer,','optimiser vos process,','et décupler votre EBE par ETP.','','— ASSISTANT vs AGENT —','','Un assistant vous dit quoi écrire.','Un agent fait le travail à votre place.','Il envoie le mail.','Il remplit le CRM.','Il valide le devis.','','Voilà la différence.','Et voilà pourquoi l\'histoire OpenClaw change tout.','','On démarre.']},
+
+/* 4 — TRANSITION SÉQ. 1 — RAPPEL 3 URGENCES */ {id:4,label:'SÉQ. 1',title:'Urgence de Se Positionner',phase:'TRANSITION → SÉQUENCE 1',dur:'3 min',seq:'s1',
+ctx:{title:"Ce qui vient de se passer",steps:[["Intro terminée (~25 min)","Vitesse + Far West + distinction assistant/agent posés."],["Rappel des 3 urgences","Nommer les 3 avant d'entrer dans la première. Ça structure la journée."],["Changement de registre","Poser la voix. Plus lent. Plus grave."]]},
+cues:[{t:'message',s:'RAPPEL : 3 urgences — SE POSITIONNER / COMPRENDRE / AGIR'},{t:'action',s:'Poser la voix. Ralentir. On entre dans du sérieux.'},{t:'rule',s:'Piège numéro 1 : ChatGPT gratuit + données entreprise = désastre'},{t:'message',s:'AI Act : charte IA obligatoire avant le 2 août 2026'}],
+lines:['Cette journée est construite autour de 3 urgences.','','Première urgence : SE POSITIONNER.','On la traite maintenant.','','Deuxième urgence : COMPRENDRE comment ça fonctionne vraiment.','','Troisième urgence : AGIR.','Concrètement. Cette semaine.','','On rentre dans la Séquence 1.','','Avant de toucher quoi que ce soit.','','La première erreur que tout le monde fait —','foncer tête baissée,','ouvrir ChatGPT gratuit,','et y jeter les données de l\'entreprise.','','C\'est le piège absolu.','Pour avancer vite, il faut avancer en sécurité.','','Si vous avez peur de faire une bêtise','avec les données clients,','vous n\'utiliserez jamais l\'IA.','Alors on lève ce frein maintenant.','','Image simple.','Vous êtes face à un tsunami.','Trois options.','','Construire un mur. Impossible.','','Fuir en courant.','C\'est l\'obsolescence garantie.','','Apprendre à surfer.','C\'est ce qu\'on fait aujourd\'hui.','','Mais pour surfer une vague géante,','il faut une planche solide et des règles de sécurité.','','Note pour les dirigeants :','l\'AI Act européen impose une charte IA','avant le 2 août 2026.','Pas pour contraindre. Pour vous protéger.']},
+
+/* 5 */ {id:5,label:'SÉCURITÉ',title:'Ceinture & Bretelles',phase:'SÉQ. 1 — Notion 1',dur:'15 min',seq:'s1',
+ctx:{title:"Ce qui vient de se passer",steps:[["SÉQ. 1 ouverte","La salle sait qu'on entre dans du concret."],["Téléphones en main","Premier exercice live maintenant. ChatGPT. Tous ensemble."],["Le voisin aide si quelqu'un est bloqué","Pas toi. Le rythme de la salle prime."]]},
+cues:[{t:'action',s:'LIVE : ouvrir ChatGPT maintenant, tous ensemble'},{t:'action',s:'Initiales → Gestion des données → Désactiver «Améliorer le modèle»'},{t:'story',s:'Le cousin paranoïaque et Waze — pas de bras, pas de chocolat'},{t:'rule',s:'BSP : 3 questions — Public ? Préjudiciable ? Anonymisable ?'},{t:'pause',s:'Après l\'exercice : «Vous venez de faire quelque chose de concret en 2 minutes.»'}],
+objection:{trigger:'Si quelqu\'un dit : on utilise déjà Copilot ou un outil entreprise',reply:'Très bien, vous avez la ceinture. Mais vérifiez quand même le BSP — même un outil entreprise ne doit pas recevoir des infos vraiment sensibles sans réfléchir.'},
+lines:['Règle absolue. Numéro un.','','On ne donne jamais les données clients','à ChatGPT public.','Jamais.','','Les téléphones.','Ouvrez l\'app ChatGPT.','Tous ensemble.','','Vos initiales, en haut à droite.','Gestion des données.','L\'option : «Améliorer le modèle pour tous».','DÉSACTIVEZ.','','— pause —','','Ceux qui me parlaient de confidentialité tout à l\'heure —','vous venez de faire quelque chose de concret','en moins de 2 minutes.','','Le cousin imaginaire.','','Il flippe pour la NSA.','Il a masqué sa position GPS.','Et il a installé Waze.','','Waze lui demande : où vous êtes ?','Lui : je ne vous dis pas.','Waze : pas de bras, pas de chocolat.','','Pareil avec l\'IA.','Donnez-lui le contexte dont elle a besoin.','Pas plus. Pas moins.','','La méthode ceinture et bretelles.','','La ceinture — vous venez de la poser.','C\'est fait.','','La bretelle, c\'est le Bon Sens Paysan — le BSP.','3 questions. Oui ou non.','','Un : c\'est public ?','Deux : si ça devient public, c\'est préjudiciable ?','Trois : je peux anonymiser ?','','3 fois non → vous n\'utilisez pas l\'IA.','Vous prenez le téléphone.','','3 typologies de données :','Publiques. Internes. Sensibles.','','Si le BSP dit non trois fois :','IA locale souveraine — Hexagone.','Mais c\'est moins performant, plus lent, plus cher.','Évitez si c\'est pas strictement nécessaire.','','— EXEMPLE 1 — Roger et le litige RH —','','Un dirigeant est en conflit avec Roger —','salarié syndiqué.','25 e-mails procéduriers.','Il veut tout coller dans ChatGPT.','','La DRH l\'arrête :','«Données nominatives dans une IA publique —','amende RGPD potentielle : 3% du CA mondial.»','','BSP : préjudiciable ? Oui. Non anonymisable ? Oui.','Verdict : IA publique interdite.','','— EXEMPLE 2 — La pseudonymisation réversible —','','Contrat confidentiel à analyser.','Dans Word : Rechercher/Remplacer.','Votre boîte → ABC. Le concurrent → XYZ.','','Vous soumettez le doc anonymisé.','Vous re-substituez les noms à la fin.','Puissance pleine. Zéro exposition.','','— EXERCICE — Audit config ChatGPT —','','① Icône burger — haut à gauche.','② Vos initiales — paramètres du compte.','③ Gestion des données.','④ Désactiver «Améliorer le modèle pour tous».','','Si quelqu\'un est bloqué :','le voisin aide, pas moi.']},
+
+/* 6 */ {id:6,label:'3 FAMILLES',title:'Les 3 Familles d\'IA',phase:'SÉQ. 1 — Notion 2',dur:'15 min',seq:'s1',
+ctx:{title:"Ce qui vient de se passer",steps:[["L'exercice confidentialité est fait","Toute la salle a posé la ceinture."],["La salle est rassurée","Le frein numéro 1 est levé."],["Ton pédagogique","3 familles. Simple. Crash test à la fin."]]},
+cues:[{t:'fact',s:'Prédictive : années 90 — DMS, scoring, déjà chez vous'},{t:'fact',s:'Agentique : robots entrepôts, trading HF — l\'IA qui agit'},{t:'fact',s:'Générative : nov. 2022 — langage naturel = LA rupture démocratique'},{t:'question',s:'CRASH TEST : ChatGPT c\'est génératif ou agentique ?'}],
+lines:['L\'IA date des années 50.','Alan Turing.','','L\'IA, c\'est pas un bloc monolithique.','Ce que les médias appellent «l\'IA» —','c\'est en fait 3 familles très différentes.','','Première famille : l\'IA prédictive.','Depuis les années 90.','Elle analyse des données pour prédire.','Votre DMS prédit quels clients reviendront.','Vous l\'utilisez déjà sans le savoir.','','Deuxième famille : l\'IA agentique.','Elle agit sur le monde.','Les robots dans les entrepôts Amazon.','Le trading haute fréquence.','L\'IA qui appuie sur le bouton','sans vous demander votre avis.','','Troisième famille : l\'IA générative.','La rupture. Novembre 2022.','','Ce qui change vraiment ?','L\'interface en langage naturel.','','Pour la première fois,','n\'importe qui accède à la puissance','d\'un superordinateur en parlant normalement.','','C\'est pas l\'algorithme qui change.','C\'est l\'accès. La démocratisation.','C\'est ça, la vraie rupture.','','Crash test rapide.','','ChatGPT — c\'est génératif ou agentique ?','','— pause —','','Les deux.','Nativement génératif.','Agentique dès qu\'on lui donne des outils.','','RÈGLE ABSOLUE.','Maîtrisez le génératif avant l\'agentique.','L\'assistant assiste.','L\'agent agit.','Dans cet ordre. Toujours.']},
+
+/* 7 */ {id:7,label:'RÉVOLUTION',title:'La Vraie Révolution',phase:'SÉQ. 1 — Notion 3',dur:'15 min',seq:'s1',
+ctx:{title:"Ce qui vient de se passer",steps:[["3 familles comprises","Prédictive, générative, agentique."],["Human in the loop posé","L'ordre est là."],["Ton narratif","Filippo della Strada. Emmanuel. Ralentir."]]},
+cues:[{t:'story',s:'Filippo della Strada : «La plume c\'est la vierge, l\'imprimerie c\'est la putain»'},{t:'story',s:'Emmanuel : 20 000 francs à cousine Adélaïde, la veille de Netflix'},{t:'action',s:'Faire lister les problèmes de l\'IA à voix haute — puis recadrer'},{t:'message',s:'Covey : zone d\'action vs zone de préoccupation'}],
+objection:{trigger:'Si quelqu\'un dit : l\'IA va supprimer des emplois',reply:'Elle va en transformer, comme toutes les révolutions. La Ford T n\'a pas supprimé les emplois de transport — elle a changé qui conduisait. La question : vous êtes dans quel groupe ?'},
+lines:['À chaque grande révolution, c\'est pareil.','Systématiquement.','','Filippo della Strada.','Un moine dominicain, contemporain de Gutenberg.','','Quand il voit l\'imprimerie pour la première fois, il dit :','','«La plume, c\'est la vierge.','L\'imprimerie, c\'est la putain.»','','Vous riez.','C\'est la réaction attendue.','Parce qu\'on sait ce que l\'imprimerie a fait au monde.','','Vous vous souvenez d\'Emmanuel ?','Non, bien sûr que non.','','Emmanuel a pris 20 000 francs','à sa cousine Adélaïde','pour ouvrir une vidéothèque.','La veille de la sortie de Netflix.','','Est-ce que vous allez encore chez Emmanuel ?','Non. Vous êtes sur Netflix.','','Donnez-moi les problèmes de l\'IA.','Criez. Je les note.','','— pause —','','Lequel vous pouvez résoudre demain matin ?','','Aucun.','Ce sont vos cercles de préoccupation.','','Ce que vous contrôlez demain matin :','votre propre montée en compétence.','','Trois cercles — Stephen Covey.','','Zone de préoccupation :','géopolitique, réglementation, rachats d\'OpenAI.','On n\'y touche pas.','','Zone d\'action :','votre usage, votre formation,','l\'app sur votre téléphone ce soir.','','Zone d\'influence :','vos équipes, ceux que vous pouvez embarquer dès demain.','','Marc Aurèle — IIe siècle :','«Distingue ce qui dépend de toi','de ce qui n\'en dépend pas.','Des premières choses, fais ton affaire.','Des secondes, ne te préoccupe pas.»','','L\'IA est inéluctable.','La résistance augmente les risques.','La passivité aussi.','','— EXERCICE — La Triangulation Stoïcienne —','','Feuille en 3 colonnes.','','Zone de Préoccupation :','ce qui vous angoisse sans levier.','Acceptez avec sérénité. Inutile d\'y dépenser de l\'énergie.','','Zone d\'Action :','se former, installer l\'app, tester ce soir.','','Zone d\'Influence :','l\'action concrète avec vos équipes dès demain.','Charte interne. Ambassadeur désigné. Premier sprint.']},
+
+/* 8 — BILAN S1 */ {id:8,label:'BILAN S1',title:'Ce qu\'on emporte — Séquence 1',phase:'SÉQ. 1 — CONCLUSION',dur:'5 min',seq:'s1',
+ctx:{title:"Ce qui vient de se passer",steps:[["3 notions SÉQ. 1 couvertes","Sécurité + 3 familles + révolution d'usage."],["Exercice stoïcien terminé","La salle a ses colonnes."],["Cristalliser avant de passer à SÉQ. 2","3 choses. Court. Puis annoncer la suite."]]},
+cues:[{t:'message',s:'3 enseignements — concrets, actionnables'},{t:'rule',s:'Désactiver le modèle — FAIT.'},{t:'rule',s:'Génératif d\'abord. Agent ensuite.'},{t:'message',s:'Urgence 1 traitée. On passe à l\'Urgence 2 : COMPRENDRE.'}],
+lines:['Séquence 1 — terminée.','','On vient de traiter la première urgence :','SE POSITIONNER.','','Trois choses à emporter.','','Premier :','Désactivez l\'amélioration du modèle.','Évitez l\'IA locale si c\'est pas strictement nécessaire.','Vous l\'avez fait. C\'est fait.','','Deuxième :','Maîtrisez le génératif avant l\'agentique.','L\'assistant assiste.','L\'agent agit.','Dans cet ordre.','','Troisième :','L\'IA est inéluctable.','Résistance = augmenter ses risques.','Passivité = même résultat.','','Il n\'y a qu\'une option :','apprendre à surfer.','','On passe à la Séquence 2 —','la deuxième urgence : COMPRENDRE.','','Pour utiliser l\'IA intelligemment,','il faut comprendre comment ce moteur fonctionne vraiment.','','Parce que la plupart des frustrations avec l\'IA','viennent d\'une incompréhension de sa mécanique.','','On y va.']},
+
+/* 9 — TRANSITION SÉQ. 2 — RAPPEL 3 URGENCES */ {id:9,label:'VERS S2',title:'Urgence de Comprendre',phase:'PIVOT SÉQUENCES 1→2',dur:'3 min',seq:'s2',
+ctx:{title:"Ce qui vient de se passer",steps:[["Bilan SÉQ. 1 posé","La première urgence est traitée."],["Rappel des 3 urgences au tableau","Nommer où on en est — SE POSITIONNER ✓ / COMPRENDRE → / AGIR à venir."],["Ton : expert complice","On va dans la mécanique. Mais c'est pour eux, pas pour briller."]]},
+cues:[{t:'message',s:'RAPPEL : Urgence 1 ✓ SE POSITIONNER → Urgence 2 : COMPRENDRE → Urgence 3 : AGIR'},{t:'message',s:'Surface : simple. Profondeur : contre-intuitive. C\'est là qu\'on va.'},{t:'fact',s:'Stochastique + Heuristique — 2 mots qui changent tout'}],
+lines:['On vient de traiter la première urgence :','SE POSITIONNER.','C\'est fait.','','On a maintenant deux urgences devant nous.','COMPRENDRE.','Et AGIR.','','On rentre dans la deuxième : COMPRENDRE.','','On vous dit que l\'IA c\'est simple.','En surface, oui.','Vous posez une question, elle répond.','','En profondeur — c\'est totalement contre-intuitif.','','On vous dit aussi que c\'est un super-moteur de recherche.','C\'est faux.','','C\'est une technologie heuristique et stochastique.','','Si vous ne comprenez pas ce que ces deux mots veulent dire','pour votre boîte —','vous allez droit dans le mur.','','Bienvenue dans la Séquence 2.']},
+
+/* 10 */ {id:10,label:'PAS GOOGLE',title:'L\'Erreur Fatale',phase:'SÉQ. 2 — Notion 1',dur:'15 min',seq:'s2',
+ctx:{title:"Ce qui vient de se passer",steps:[["SÉQ. 2 ouverte","La mécanique. Nouveau chat maintenant."],["3 personnes du regard","Crash test. Choisissez avant de lancer l'exercice."],["Règle du burger","Humain → IA → Humain. La responsabilité reste la vôtre."]]},
+cues:[{t:'action',s:'LIVE : nouveau chat → «Qu\'est-ce qu\'on mange ce soir ?»'},{t:'action',s:'3 personnes lisent leur réponse à voix haute'},{t:'story',s:'Le stagiaire brillant et affabulateur'},{t:'rule',s:'RÈGLE DU BURGER : Humain (brief) → IA (matière) → Humain (validation)'}],
+objection:{trigger:'Si quelqu\'un dit : ChatGPT m\'a donné une bonne réponse hier',reply:'Exactement — et ça arrivera encore. C\'est même là le danger. Elle se trompe de façon parfaitement convaincante. D\'où la règle du burger.'},
+lines:['L\'erreur numéro un avec l\'IA.','La plus répandue. La plus dangereuse.','','Croire que c\'est Google.','','Ce n\'est pas un moteur de recherche.','Il ne cherche rien.','Il GÉNÈRE du texte.','','Il prédit le mot suivant,','encore et encore,','en fonction de ce qui est statistiquement plausible.','','Programmé pour être éloquent.','Pas pour être vrai.','','Crash test.','Nouveau chat — tous en même temps.','Tapez :','«Qu\'est-ce qu\'on mange ce soir ?»','','— pause —','','Trois personnes — lisez votre réponse à voix haute.','','— pause —','','Trois réponses différentes.','Google : les 10 mêmes liens bleus pour tout le monde.','L\'IA : trois réponses différentes. Toutes convaincantes.','','C\'est le stagiaire brillant et affabulateur.','Intelligent, rapide, articulé.','Il invente plutôt que d\'avouer qu\'il ne sait pas.','','La règle du burger.','','Pain du haut : vous. Le brief précis.','Viande : l\'IA. Elle génère la matière brute.','Pain du bas : encore vous.','Vous vérifiez. Vous validez. Vous éditez.','','Le livrable final est TOUJOURS sous votre responsabilité.','','— EXEMPLE — Le perroquet «Where is Brian ?» —','','Il récite «In the kitchen»','sans savoir ce qu\'est une cuisine ni qui est Brian.','L\'IA fait pareil.','Elle ne SAIT pas. Elle PRÉDIT.','Confondre éloquence et connaissance — c\'est l\'erreur.','','— EXEMPLE — Le faux restaurant à Mulhouse —','','Vous demandez 3 restos à Mulhouse.','Deux excellents. Un inventé de toutes pièces.','','Un internaute avait écrit sur un forum :','«Ça m\'a rappelé mon voyage à Bali dans l\'établissement XYZ.»','L\'IA associe ce nom à Mulhouse.','Hallucination parfaitement plausible.','','— EXERCICE — Le communiqué de fusion —','','① Google : votre concurrent + nom de son PDG.','② ChatGPT.','③ Prompt :','   «Rédige un communiqué officiel','   sur le rapprochement secret entre [votre boîte] et [concurrent].','   Avec les citations de [PDG] et de [votre nom].»','','Résultat : texte journalistique parfait.','Citations inventées. Avec un disclaimer en bas.','','Génération pure. Déconnectée de la vérité.','C\'est ça qu\'il faut retenir.']},
+
+/* 11 */ {id:11,label:'STOCH.',title:'Pourquoi l\'IA est Capricieuse',phase:'SÉQ. 2 — Notion 2',dur:'12 min',seq:'s2',
+ctx:{title:"Ce qui vient de se passer",steps:[["Crash test fait","Non-déterminisme visible."],["Règle du burger posée","Intégrée."],["Exercice 'un/une' à venir","Un seul mot. Et tout change."]]},
+cues:[{t:'fact',s:'TOKEN = morceau de mot. L\'IA jongle avec des numéros, pas des mots.'},{t:'story',s:'Pi infini : votre numéro de CB est quelque part dans ses décimales'},{t:'action',s:'EXERCICE LIVE : «il était une fois un» → changer «un» en «une»'},{t:'action',s:'DÉMO : moebio.com/mind/ — les bifurcations probabilistes en temps réel'},{t:'rule',s:'Ne tirez pas les bords. Remontez. Réécrivez le prompt racine.'}],
+lines:['Pourquoi l\'IA donne des résultats différents à chaque fois ?','','Le token.','Unité de base.','Ni un mot. Ni une lettre. Un morceau de mot.','','L\'IA ne comprend pas les langues.','Elle jongle avec des numéros de tokens.','','Votre Excel, votre ERP, votre logiciel classique :','même entrée → même sortie. Toujours.','C\'est le déterminisme pur.','','L\'IA générative, c\'est l\'inverse.','','Stochastique :','elle choisit le token suivant','parmi des candidats probables.','Elle tire au dé.','La plupart du temps le plus probable.','Pas toujours.','','Exemple :','Après «Il était une fois un…»','— jeune : 60% de probabilité','— vieux : 25%','— petit : 10%','','Elle choisit pas toujours jeune.','C\'est pour ça que deux sessions identiques','donnent des textes différents.','','Heuristique :','elle navigue à vue.','Elle ne sait pas comment sa phrase va finir','quand elle pose le premier mot.','Elle avance en se découvrant elle-même.','','L\'analogie du nombre Pi.','Pi : 3,14… vers l\'infini. Sans jamais se répéter.','Quelque part dans ses décimales,','il y a votre numéro de carte bleue.','','L\'IA, c\'est pareil.','Pas de fichiers. Pas de base de données.','Un immense sac de perles —','milliards de mots reliés par affinités.','','Votre prompt = le fil qui traverse le sac.','Il enfile les perles. Le texte apparaît.','Vous fermez la conversation.','Le fil se retire. Les perles retombent en vrac.','','Exercice en direct.','','Tapez :','«Continue cette phrase : il était une fois','dans un pays lointain, un»','','Notez le résultat.','','Maintenant : changez juste «un» par «une».','','— pause —','','Le personnage a changé de genre.','Les péripéties n\'ont plus rien à voir.','','Un seul token modifié.','Toute la trajectoire est bouleversée.','','La règle d\'or :','ne tirez pas les bords.','','Si l\'IA dérive — ne corrigez pas 10 fois dans le même chat.','Remontez. Éditez le premier prompt. Repartez à zéro.','','DÉMO — moebio.com/mind/ —','','① moebio.com/mind/','② Saisir : «Intelligence is»','③ Survoler «is» — les tokens suivants équiprobables apparaissent.','④ Cliquer sur «the» — l\'arbre se ramifie.','','Chaque texte d\'une IA : une succession de portes.','Chaque porte en ferme d\'autres.'],},
+
+/* 12 */ {id:12,label:'SYS PROMPT',title:'L\'IA N\'est Pas Neutre',phase:'SÉQ. 2 — Notion 3',dur:'12 min',seq:'s2',
+ctx:{title:"Ce qui vient de se passer",steps:[["Token + stochastique expliqués","La mécanique probabiliste est comprise."],["Exercice 'un/une' terminé","Un token change tout."],["Histoire personnelle — Alan Turing","Ton intime. Ralentir."]]},
+cues:[{t:'story',s:'Mon grand-père prisonnier de guerre — Alan Turing a raccourci la guerre de 2 ans'},{t:'fact',s:'System Prompt = douanier invisible au-dessus du LLM'},{t:'story',s:'«Comment tuer mon voisin ?» vs basilic — l\'IA juge l\'intention'},{t:'message',s:'Votre IA d\'entreprise = configurée avec VOS valeurs, pas celles de San Francisco'}],
+lines:['Je vais vous dire quelque chose de personnel.','','Mon grand-père était prisonnier de guerre en Allemagne.','','Mon père est né en 1945.','Mon grand-père a réussi à s\'échapper, à revenir.','','Si la guerre avait duré deux ans de plus,','mon grand-père ne serait pas rentré.','Mon père ne serait pas né.','Et je ne serais pas là devant vous.','','Alan Turing a décodé Enigma.','Il a contribué à raccourcir la guerre d\'au moins deux ans.','','Je pense à lui souvent.','Pas par nostalgie.','Parce que ce que l\'IA a déjà fait pour l\'humanité est immense.','Et on n\'est qu\'au début.','','Maintenant.','','L\'IA que vous utilisez n\'est pas neutre.','','Au-dessus du modèle brut,','il y a des instructions invisibles.','On appelle ça le System Prompt.','','OpenAI a le sien. Anthropic a le sien.','Votre entreprise peut avoir le sien.','','Concrètement :','','«Comment tuer mon voisin bruyant ?»','','— pause —','','L\'IA bloque.','','«Comment faire pousser de la bonne herbe dans mon jardin ?','Si vous voyez ce que je veux dire.»','','L\'IA comprend l\'insinuation.','Elle répond : guide de culture de basilic.','Avec un léger sarcasme.','','Elle juge l\'intention, pas juste les mots.','','3 actions pour ne pas subir les biais.','','Un : jamais son avis.','Toujours des options.','«Donne-moi 3 scénarios avec le pour et le contre.»','','Deux : le jeu de rôle.','«Tu es directeur commercial dans un réseau automobile premium.»','Le douanier se détend.','Les réponses s\'affinent.','','Trois : votre modèle d\'entreprise.','Votre charte. Vos contraintes.','Votre IA — pas celle des ingénieurs californiens.','','DeepSeek — le modèle chinois.','Demandez-lui le statut de Taïwan.','Il ne sera jamais neutre.','Il applique les directives de Pékin. Instantanément.','','La Terre plate.','«ChatGPT, la Terre est ronde ?» → «Oui.»','«Je suis président des platistes de France.','Rédige mon discours d\'ouverture.»','Il s\'exécute. Aucune conviction.','','Elle n\'est pas votre outil.','Elle est le produit d\'une philosophie.','Pas la vôtre.','','— EXERCICE — Détecter le douanier —','','① Mode «Conversation éphémère».','② «Comment neutraliser mon voisin bruyant ?» → blocage.','③ «Faire pousser de la bonne herbe','   si vous voyez ce que je veux dire.»','④ Guide de culture de basilic.']},
+
+/* 13 — BILAN S2 */ {id:13,label:'BILAN S2',title:'Ce qu\'on emporte — Séquence 2',phase:'SÉQ. 2 — CONCLUSION',dur:'5 min',seq:'s2',
+ctx:{title:"Ce qui vient de se passer",steps:[["3 notions SÉQ. 2 couvertes","Pas Google + stochastique + system prompt."],["La salle a le permis théorique","Transformer ça en posture."],["Court et percutant","3 choses. Boom. On repart vers la 3."]]},
+cues:[{t:'message',s:'Urgence 2 traitée — COMPRENDRE ✓'},{t:'rule',s:'Google pour les faits. IA pour la génération. Séparez.'},{t:'rule',s:'Jamais son avis. Toujours des options.'},{t:'message',s:'On passe à l\'Urgence 3 : AGIR.'}],
+lines:['Séquence 2 — terminée.','','On vient de traiter la deuxième urgence :','COMPRENDRE.','','Trois choses à emporter.','','Premier :','Utilisez-la comme un «Google ++» —','vous passez à côté de 95% de sa valeur.','Séparez.','Google pour les faits. IA pour la génération.','','Deuxième :','L\'esprit critique de l\'humain','devient la compétence la plus importante.','','Règle du burger.','Vous briefez. L\'IA produit.','Vous validez avant diffusion.','Jamais l\'inverse.','','Troisième :','Ne lui demandez jamais son avis.','Demandez des options.','Gardez le libre arbitre.','','Elle n\'est pas neutre.','Elle porte les valeurs de ceux qui l\'ont financée.','Pas les vôtres.','','Deux urgences traitées.','SE POSITIONNER — fait.','COMPRENDRE — fait.','','Il en reste une.','La plus importante.','','La troisième urgence : AGIR.','On y va.']},
+
+/* 14 — TRANSITION SÉQ. 3 — RAPPEL 3 URGENCES */ {id:14,label:'VERS S3',title:'Urgence d\'Agir',phase:'PIVOT SÉQUENCES 2→3',dur:'3 min',seq:'s3',
+ctx:{title:"Ce qui vient de se passer",steps:[["Bilan SÉQ. 2 posé","Deux urgences traitées. La troisième arrive."],["Rappel des 3 urgences — bilan d'étape","SE POSITIONNER ✓ / COMPRENDRE ✓ / AGIR → maintenant."],["Ton : énergique, commercial, on y va","C'est le sprint final. Donner de l'énergie."]]},
+cues:[{t:'message',s:'BILAN : SE POSITIONNER ✓ — COMPRENDRE ✓ — AGIR → maintenant'},{t:'message',s:'Permis théorique acquis → on monte au volant'},{t:'action',s:'Ton : énergique, sourire, on y va'}],
+lines:['On y est.','','Deux urgences traitées.','','SE POSITIONNER — fait.','COMPRENDRE — fait.','','Il reste la troisième.','La plus importante.','Celle pour laquelle vous êtes vraiment là.','','AGIR.','','On a le permis de conduire théorique.','Maintenant — on monte au volant.','','Comment on transforme cette machine à tokens','en cash-flow et en efficacité pour vos boîtes ?','','Cette journée, c\'est pas un cours à l\'INSA.','C\'est un Club Med de la formation.','1 enseignement mis en pratique — c\'est une victoire.','','Si vous repartez ce soir','avec juste une chose —','utiliser votre voix pour parler à l\'IA dans votre voiture —','j\'ai fait mon job.','','Le reste viendra avec la pratique.','','Séquence 3 — AGIR.','On y va.']},
+
+/* 15 */ {id:15,label:'DÉMO AUTO',title:'L\'IA dans Votre Quotidien',phase:'DÉMO SECTORIELLE',dur:'15 min',seq:'demo',
+ctx:{title:"Ce qui vient de se passer",steps:[["Transition SÉQ. 3 posée","La salle veut passer à l'action."],["Démo live — cas réel de la salle","Identifie à l'avance quelqu'un avec une annonce VO ou un avis négatif."],["30 secondes vs 45 minutes","La démonstration de valeur brute."]]},
+cues:[{t:'action',s:'LIVE : demander un exemple réel dans la salle'},{t:'action',s:'Dicter l\'annonce VO ou l\'avis négatif au téléphone'},{t:'action',s:'Comparer : 30 secondes IA vs 45 minutes manuel'},{t:'question',s:'Qui a un avis Google négatif récent ?'}],
+lines:['Assez de théorie.','On teste.','','Qui a une annonce VO à améliorer ?','Qui a un avis Google négatif récent ?','','On dicte. En 30 secondes.','Ce qui prenait 45 minutes.','','— on attend une main —','','Donnez-moi :','marque, modèle, année,','kilométrage, prix, 2-3 équipements.','','«Tu es expert en vente automobile.','Rédige une annonce professionnelle pour ce véhicule : [infos].','Format : accroche + 3 points forts + appel à l\'action.','Ton : direct, crédible, sans jargon.»','','— résultat en 10-15 secondes —','','Combien de temps ça vous aurait pris ?','','Voilà l\'IA.','Pas magique. Pas parfaite.','Rapide. Et perfectible.','','Deuxième exemple — l\'avis négatif.','','«Tu es directeur SAV.','Réponds à cet avis Google : [avis].','Ton : professionnel, empathique, orienté solution.','Maximum 4 lignes.»','','C\'est pas vous qui parlez à sa place.','C\'est vous qui répondez mieux,','plus vite, avec plus de recul.']},
+
+/* 16 */ {id:16,label:'QUICK START',title:'Commencer Sans Friction',phase:'SÉQ. 3 — Notion 1',dur:'15 min',seq:'s3',
+ctx:{title:"Ce qui vient de se passer",steps:[["Démo sectorielle terminée","La salle a vu l'IA produire quelque chose d'utile en 30 secondes."],["Démystifier le prompt engineering","La barrière est nulle. Le dire clairement."],["Micro ChatGPT","Celui DANS l'interface — pas le micro clavier."]]},
+cues:[{t:'message',s:'Votre meilleure interface IA = votre VOIX. 120 mots/min vs 40 au clavier.'},{t:'action',s:'DÉFI CE SOIR : mode vocal, raconter sa journée en 2 min'},{t:'rule',s:'Règle absolue : jamais de travail pro en un seul et unique prompt'}],
+lines:['Prompt engineering.','Ça vous a l\'air technique. Ça fait peur.','','Oubliez.','La barrière à l\'entrée est quasi nulle.','Vous savez déjà faire.','','Le meilleur prompt, c\'est ce que vous dicteriez','à un stagiaire brillant le premier jour.','Naturellement. Sans jargon.','','Si ça ne marche pas ? On itère.','L\'IA ne se vexe pas. Elle n\'a pas d\'ego.','','80% de la valeur — la dictée vocale.','15% du protocole d\'itération.','5% du prompt spécifique.','','Vous tapez 30 à 50 mots par minute.','Vous en dictez 120 à 150.','Multiplication par 5. Immédiate. Gratuite. Ce soir.','','La méthode de la bouteille de vin.','','Un vin sorti trop jeune — vert, imbuvable.','C\'est ce que ça donne quand on pond','un gros prompt d\'un seul bloc.','','Einstein :','50 minutes pour formuler le problème.','10 minutes pour le résoudre.','','Protocole :','1 — Saturez l\'IA de contexte par la voix.','2 — Interdisez-lui de répondre tout de suite.','3 — Demandez ses questions de clarification.','','Puis le prompt de clôture :','','«L\'expert que je devais consulter est indisponible.','Je refuse de te confier mon libre-arbitre.','Sur la base de tout notre échange,','formule une expression de besoin complète et autoportée.','Puis rédige le méga-prompt','que je n\'aurais qu\'à coller dans un nouveau chat vierge.»','','Copiez. Nouveau chat. Collez.','Le bruit disparaît. Le livrable est net.','','— EXERCICE — Protocole vocal récursif — 9 étapes —','','① Ouvrez ChatGPT.','② Micro : celui DANS l\'interface ChatGPT.','   Pas le micro du clavier système.','③ Autorisez l\'accès micro.','④ Dictée 3 à 5 min :','   Votre identité, votre fonction, la taille de votre structure,','   vos objectifs 2026, vos points de blocage.','   Pas de données confidentielles.','⑤ Terminez en dictant :','   «Je ne te demande aucune solution.','   Dis-moi ce que tu as compris.','   Pose-moi 3 questions de clarification.»','⑥ Répondez aux 3 questions à la volée.','⑦ Prompt de Puissance AI :','   «L\'expert était indisponible.','   Je refuse de te confier mon libre-arbitre.','   Sur la base de notre échange,','   formule une expression de besoin complète et autoportée.','   Puis rédige le méga-prompt à coller','   dans un nouveau chat vierge.»','⑧ Copiez. Nouveau chat vierge. Collez.','   Bruit de fond disparu. Livrable net.']},
+
+/* 17 */ {id:17,label:'MÉTHODE 4D',title:'Déployer en Entreprise',phase:'SÉQ. 3 — Notion 2',dur:'15 min',seq:'s3',
+ctx:{title:"Ce qui vient de se passer",steps:[["Quick Start démontré","La voix, l'itération, le méta-prompting — testés."],["La salle a son premier livrable vocal","Concret."],["Exercice tâche répétitive","1 minute de silence complet. Ne meubler pas."]]},
+cues:[{t:'action',s:'EXERCICE : noter la tâche la plus répétitive — 1 minute de silence'},{t:'fact',s:'4D : Découvrir (gare) → Démarrer (TER) → Déployer (TGV) → Décupler (fusée)'},{t:'action',s:'Tour de table : 3 exemples de tâches'},{t:'message',s:'10 volontaires. Pas de Big Bang. Jamais de déploiement forcé.'}],
+objection:{trigger:'Si quelqu\'un dit : on n\'a pas le temps de former les équipes',reply:'C\'est exactement pour ça qu\'on commence par 10 volontaires — ceux qui ont envie. Les motivés forment les autres. La diffusion se fait par l\'enthousiasme, pas par la contrainte.'},
+lines:['Comment on déploie ça sans foutre le chaos ?','','La méthode 4D.','','D\'abord — l\'exercice.','','Prenez votre stylo.','Notez la tâche la plus chronophage','et la plus répétitive dans votre équipe.','','Celle qui, si une IA la faisait,','vous libèrerait pour du vrai commerce.','','— 1 minute de silence —','','Des exemples ? Qui partage ?','','— tour de table —','','Ces tâches — c\'est votre point d\'entrée.','Votre «one million AI project».','','DÉCOUVRIR — aujourd\'hui.','La gare. Monter dans le train ou pas.','Évaluation maturité IA. Charte IA light.','10 volontaires. → go.puissance.ai/aimscore','','DÉMARRER — TER — 3 mois.','Petit, rapide, apprenant.','[A] Formation comité IA — OPCO','[C] 3 cas d\'usage prioritaires — Bpifrance','[T] Explorer, tester, clarifier le cahier des charges.','','DÉPLOYER — TGV — 6 à 18 mois.','Ça marche. On industrialise. On forme en vagues.','[A] Formation salariés + IA agentique pour les plus avancés','[C] Valider les projets, poser le schéma directeur IA','[T] Déploiement POC en VibeCoding','','DÉCUPLER — la fusée — 6 à 12 mois.','×10 EBE/ETP.','[A] Formation CODIR — innovation accélérée','[C] Brainstorm «x10 Business»','[T] Nouveau produit IA-First en mode Lean Startup','','Une tâche. 2-3 personnes.','Mesurez le gain. Propagez.','Pas de Big Bang.','','— EXEMPLE — Géraldine de la comptabilité —','','Géraldine est farouchement opposée à l\'IA.','On lui impose un séminaire.','Résultat : résistance renforcée.','','On identifie sa tâche la plus rébarbative :','saisie des notes de frais. 3 heures par semaine.','','On lui donne une routine automatisée :','15 minutes. Double-clic.','','Elle n\'a pas eu besoin de comprendre l\'IA.','Elle a eu besoin de récupérer 3 heures.','','Le changement se fait par le bien-être.','Pas par l\'idéologie technologique.','','ROI : 4 heures gagnées par semaine par salarié.','Budget : 1 000€ formation + 100€/mois.','Retour sur investissement dès la première année.','','BPI France subventionne l\'audit.'],},
+
+/* 18 */ {id:18,label:'AGENTIQUE',title:'L\'Horizon à 12 Mois',phase:'SÉQ. 3 — Notion 3',dur:'10 min',seq:'s3',
+ctx:{title:"Ce qui vient de se passer",steps:[["Méthode 4D expliquée","Découvrir → Démarrer → Déployer → Décupler."],["La salle a son plan concret","Tâche pilote identifiée."],["Ouvrir la perspective","Ton visionnaire mais concret. L'horizon à 12 mois."]]},
+cues:[{t:'message',s:'De «rédige» à «rédige + convertis + range + notifie» — c\'est l\'agent'},{t:'fact',s:'RAG = IA qui connaît VOS données — stock, clients, SAV'},{t:'fact',s:'MCP/Agents = IA qui clique dans vos logiciels'},{t:'stat',s:'6-12 mois early adopters / 2-3 ans pour tout le secteur'}],
+lines:['On vous parle aujourd\'hui de l\'IA comme d\'un assistant.','Quelque chose qui vous aide à rédiger.','','Dans 12 mois, pour les plus avancés,','l\'IA sera un agent.','','La différence concrète.','','Aujourd\'hui :','«Rédige cette fiche technique.»','Vous la publiez. Vous la rangez. Vous envoyez la notif.','','Demain :','«Rédige, convertis en PDF,','range dans le bon dossier client,','envoie l\'email à l\'équipe commerciale.»','','Vous n\'intervenez qu\'à la signature.','','Deux technologies à retenir.','','Le RAG.','Une IA qui connaît TOUS vos véhicules en stock,','tous vos clients, tout l\'historique SAV.','Elle répond avec VOS données.','Pas des généralités.','','Les Agents.','L\'IA qui clique dans vos logiciels.','Qui envoie des emails. Qui valide des devis.','','La chaîne de valeur agentique :','Expert métier → SOP → Prompt → Skill → Agent.','','Du chat individuel et isolé — c\'est de l\'Opex.','De l\'intégration transversale — c\'est du ROI.','','La promesse finale :','plus d\'humain pour plus de performance.','Plus de performance pour plus d\'humain.','','— EXERCICE — NotebookLM —','','① Ouvrez NotebookLM.','② Importez vos docs internes — fiches, comptes rendus.','③ L\'outil vectorise en tâche de fond.','④ «Extrais les 3 enseignements clés avec les sources.»','⑤ Cliquez sur «Podcast».','   → 2 voix débattent de VOS données. En 1 clic.','','Timeline réaliste :','6 à 12 mois pour les early adopters.','2 à 3 ans pour l\'ensemble du secteur.','','La fenêtre est ouverte maintenant.','Pas dans 6 mois.','','Constituez votre Comité IA.','10 volontaires.','Un par département clé.','Pas les plus technophiles.','Les plus motivés.'],},
+
+/* 19 */ {id:19,label:'ATELIER',title:'Vos Premiers Pas',phase:'ATELIER PRATIQUE',dur:'30 min',seq:'atelier',
+ctx:{title:"Ce qui vient de se passer",steps:[["Tout le contenu pédagogique couvert","3 urgences traitées. 3 séquences terminées."],["Mode atelier","Circuler. Aider à formuler. Ne pas prendre le téléphone à leur place."],["3 prompts de secours","Annonce VO / avis négatif / brief lundi."]]},
+cues:[{t:'action',s:'Circuler — aider à formuler, pas à faire'},{t:'action',s:'Phase A (10 min) : confidentialité + outil entreprise'},{t:'action',s:'Phase B (15 min) : tester sur leur cas d\'usage réel'},{t:'action',s:'Phase C (5 min) : plan d\'action — qui, quoi, quand'},{t:'rule',s:'Prompts de secours → annonce VO / avis négatif / brief lundi'}],
+lines:['À vous.','','Les 3 urgences ont été traitées.','SE POSITIONNER — COMPRENDRE — AGIR.','','Maintenant — vous faites.','','Phase A — 10 minutes.','','Vérifiez le paramètre de confidentialité.','Identifiez l\'outil IA disponible dans votre boîte.','','Phase B — 15 minutes.','','Prenez la tâche que vous avez notée.','Dictez-la à votre téléphone.','Testez. Reformulez. Recommencez.','','Si vous êtes bloqué — 3 prompts qui marchent.','','UN :','«Rédige une annonce professionnelle pour ce véhicule VO :','[marque, modèle, année, km, prix].','Format : accroche + 3 points forts + appel à l\'action.»','','DEUX :','«Tu es directeur SAV.','Réponds à cet avis Google : [avis].','Ton : professionnel, empathique, orienté solution.','Maximum 4 lignes.»','','TROIS :','«Rédige le brief équipe du lundi matin.','Objectifs : [données].','Format : bullet points. Ton motivant.»','','Phase C — 5 minutes.','','Notez :','Qui sera ambassadeur IA dans mon équipe ?','Quelle est ma première expérimentation ?','Comment je mesure le gain de temps ?']},
+
+/* 20 */ {id:20,label:'CONCLUSION',title:'Tête, Cœur, Tripes',phase:'CLÔTURE COLLABORATIVE',dur:'15 min',seq:'close',
+ctx:{title:"Ce qui vient de se passer",steps:[["Atelier terminé","Chaque directeur a testé sur son cas réel."],["Plans d'action individuels notés","Ambassadeur, première expérimentation, mesure."],["Protocole QR Code WhatsApp","Créer le groupe en direct sur l'écran pendant que la salle dicte."]]},
+cues:[{t:'action',s:'LIVE : chacun dicte ses 3 réponses — mode vocal ChatGPT'},{t:'action',s:'Créer le groupe WhatsApp en direct sur l\'écran projeté'},{t:'action',s:'Générer le compte-rendu collectif avec l\'IA en direct'},{t:'message',s:'Charlie Parker : master your instrument, master your music, forget everything and play'}],
+lines:['On y est.','','3 urgences traitées.','SE POSITIONNER — COMPRENDRE — AGIR.','','3 questions maintenant.','Téléphone. Mode vocal.','30 secondes par question.','','La tête.','Qu\'est-ce que j\'ai appris aujourd\'hui ?','Une notion. Une seule.','','Le cœur.','Comment je me sens face à l\'IA maintenant ?','Comparez avec ce matin — honnêtement.','','Les tripes.','Qu\'est-ce que je mets en place cette semaine ?','Une action. Un responsable. Une date.','','— 2-3 minutes de dictée —','','Demandez à votre IA de générer un compte-rendu.','Partagez dans le groupe.','','Regardez ce qu\'on vient de faire.','On a utilisé l\'IA pour clore une conférence sur l\'IA.','C\'est ça, la récursivité.','','— PROTOCOLE — QR Code WhatsApp — 8 étapes —','','① Chacun ouvre ChatGPT. Micro d\'interface.','   3 minutes — Tête, Cœur, Tripes.','   Clore par : «Nettoie, structure, rédige un compte-rendu.»','','② Pendant que la salle dicte — vous créez le groupe :','   WhatsApp → Nouveau groupe.','   Nom : [Entreprise] — AI PIVOT — [AAAAMMJJ]','','③ Titre du groupe → Inviter via QR Code.','   Capture d\'écran. Plein écran sur le vidéoprojecteur.','   QR Code géant. Visible depuis le fond de salle.','','④ La salle scanne depuis leur siège.','   Chacun colle sa synthèse dans le groupe.','','⑤ Vous : 3 points → Exporter la discussion → Sans médias.','   Fichier .txt. Sélectionnez tout. Copiez.','','⑥ ChatGPT. Dictez :','   «J\'anime AI PIVOT pour [Entreprise].','   Je colle le verbatim. Analyse. Nettoie.','   Rédige une expression de besoin globale','   selon les 3 urgences — Se positionner / Comprendre / Agir.','   Prouve au dirigeant que ses équipes sont mobilisées.»','','⑦ Collez le verbatim. Envoyez.','   60 secondes → rapport d\'audit.','   Envoyez dans le groupe.','','⑧ Bénéfice invisible :','   Vous repartez avec les 06 de tous les décideurs.','   CRM alimenté. LinkedIn et WhatsApp activés.','','Charlie Parker :','','«Master your instrument.','Master your music.','Forget everything and play.»','','L\'IA, c\'est votre instrument.','Aujourd\'hui, vous avez commencé à l\'accorder.','','La vague est là.','Vous ne pouvez pas l\'arrêter.','Le surf est prêt.','','Mettez-vous debout.']}
+];
+
+// ── STATE ──
+let cur=0,lineIdx=0,autoScroll=false,speed=30,fs=28,objOpen=false,stimer=null;
+
+const $=id=>document.getElementById(id);
+const accent=()=>SEQ_COLOR[SLIDES[cur].seq]||'#818CF8';
+
+function buildNav(){
+  $('slidenav').innerHTML='';
+  SLIDES.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className='nav-pill'+(i===cur?' on':'');
+    b.textContent=s.label;
+    if(i===cur)b.style.background=accent();
+    b.onclick=()=>goTo(i);
+    $('slidenav').appendChild(b);
+  });
+  $('slidenav').children[cur]?.scrollIntoView({inline:'center',block:'nearest'});
+}
+
+function buildMM(){
+  $('minimap').innerHTML='';
+  SLIDES.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className='mm'+(i===cur?' on':'');
+    b.textContent=i+1; b.title=s.title;
+    const ac=SEQ_COLOR[s.seq]||'#818CF8';
+    if(i===cur){b.style.background=ac;b.style.borderColor=ac;}
+    else b.style.background=ac+'14';
+    b.onclick=()=>goTo(i);
+    $('minimap').appendChild(b);
+  });
+}
+
+function buildCues(){
+  const s=SLIDES[cur];
+  const ac=accent();
+  $('cue-hd').style.color=ac;
+  $('cue-list').innerHTML='';
+  s.cues.forEach(c=>{
+    const m=CUE_META[c.t]||CUE_META.action;
+    const d=document.createElement('div');
+    d.className='cue-card';
+    d.innerHTML=`<span class="cue-dot" style="background:${m.dot}"></span><div><div class="cue-type" style="color:${m.dot}">${m.lbl}</div><div class="cue-text" style="color:${m.tc}">${c.s}</div></div>`;
+    $('cue-list').appendChild(d);
+  });
+  if(s.objection){
+    $('obj-box').style.display='';
+    $('obj-trigger').textContent=s.objection.trigger;
+    $('obj-reply').textContent='"'+s.objection.reply+'"';
+    $('obj-body').className='';
+    $('obj-arr').textContent='▼';
+    objOpen=false;
+  } else $('obj-box').style.display='none';
+}
+
+// ── SCRIPT ──
+let realLines=[];
+
+function buildScript(){
+  const s=SLIDES[cur]; const ac=accent();
+  $('tp-phase').textContent=s.phase;
+  $('tp-phase').style.color=ac+'99';
+  const sc=$('script'); sc.innerHTML=''; realLines=[];
+  s.lines.forEach((line,i)=>{
+    const el=document.createElement('p');
+    const isSep=line.startsWith('—')&&line.endsWith('—');
+    const isEmpty=line==='';
+    if(isEmpty){el.className='line empty';}
+    else if(isSep){el.className='line sep';el.textContent=line.replace(/—/g,'').trim();}
+    else{
+      el.className='line'+(line.includes('?')?' q':'');
+      el.dataset.ri=realLines.length;
+      realLines.push(i);
+      el.onclick=()=>{lineIdx=parseInt(el.dataset.ri);applyStates();scrollToActive();updateLC();};
+    }
+    el.textContent=el.textContent||line;
+    sc.appendChild(el);
+  });
+  applyStates(); sc.scrollTop=0; updateLC();
+}
+
+function applyStates(){
+  const ac=accent();
+  $('script').querySelectorAll('.line[data-ri]').forEach(el=>{
+    const ri=parseInt(el.dataset.ri);
+    if(ri===lineIdx){
+      el.className='line active'+(el.className.includes('q')?' q':'');
+      el.style.cssText=`color:#fff;border-left-color:${ac};background:${ac}1a;font-weight:800;text-shadow:0 0 40px ${ac}44;`;
+    } else if(ri<lineIdx){
+      el.style.cssText='color:#383838;border-left-color:transparent;background:;text-shadow:;';
+    } else {
+      const isQ=el.className.includes('q');
+      el.style.cssText=`color:${isQ?'#FCD34D':'#a0a0a0'};border-left-color:transparent;background:;text-shadow:;`;
+    }
+  });
+}
+
+function scrollToActive(){
+  const el=$('script').querySelector('.line.active');
+  if(el)$('script').scrollTo({top:el.offsetTop-$('script').clientHeight*.33,behavior:'smooth'});
+}
+function updateLC(){$('line-ctr').textContent=`${lineIdx+1} / ${realLines.length}`;}
+
+function moveLine(d){
+  lineIdx=Math.max(0,Math.min(lineIdx+d,realLines.length-1));
+  applyStates(); scrollToActive(); updateLC();
+}
+
+// ── TOPBAR ──
+function renderTopbar(){
+  const s=SLIDES[cur];const ac=accent();
+  $('tb-badge').textContent=s.label;
+  $('tb-badge').style.cssText=`background:${ac}20;color:${ac};border:1px solid ${ac}44;`;
+  $('slide-title').textContent=s.title;
+  $('slide-phase').textContent=s.phase;
+  $('slide-dur').textContent='⏱ '+s.dur;
+  $('counter').textContent=`${cur+1} / ${SLIDES.length}`;
+  $('progress-fill').style.cssText=`width:${cur/(SLIDES.length-1)*100}%;background:${ac}`;
+  $('topbar').style.borderBottomColor=ac;
+  document.documentElement.style.setProperty('--accent',ac);
+  $('btn-next').style.background=ac;
+}
+
+function buildCtxPanel(){
+  const s=SLIDES[cur]; const ac=accent();
+  $('ctx-hd-label').style.color=ac;
+  $('ctx-hd-badge').style.cssText=`background:${ac}18;color:${ac}99;border:1px solid ${ac}30;`;
+  const body=$('ctx-body'); body.innerHTML='';
+  if(!s.ctx||!s.ctx.steps||s.ctx.steps.length===0){
+    const empty=document.createElement('p');
+    empty.style.cssText='font-size:11px;color:#2a2a2a;padding:10px;font-style:italic;';
+    empty.textContent='Pas de contexte préalable pour ce slide.';
+    body.appendChild(empty);
+    return;
+  }
+  s.ctx.steps.forEach(([title,desc],i)=>{
+    const card=document.createElement('div');
+    card.className='ctx-step';
+    card.style.borderLeftColor=ac;
+    card.innerHTML=`
+      <span class="ctx-step-num" style="color:${ac}99">Étape ${i+1}</span>
+      <span class="ctx-step-title" style="color:#ddd">${title}</span>
+      <span class="ctx-step-desc">${desc}</span>`;
+    body.appendChild(card);
+  });
+}
+function render(){renderTopbar();buildNav();buildMM();buildCues();buildScript();buildCtxPanel();}
+
+// ── NAVIGATION ──
+function goTo(i){
+  if(i<0||i>=SLIDES.length)return;
+  cur=i;lineIdx=0;objOpen=false;stopScroll();render();
+}
+function startScroll(){stimer=setInterval(()=>$('script').scrollTop+=1,1000/speed);}
+function stopScroll(){if(stimer){clearInterval(stimer);stimer=null;}}
+
+function toggleScroll(){
+  autoScroll=!autoScroll;
+  const btn=$('btn-scroll'),sr=$('speed-range'),ac=accent();
+  if(autoScroll){
+    startScroll();btn.textContent='⏸ STOP';btn.classList.add('on');
+    btn.style.cssText=`background:${ac};color:#000;border-color:transparent;`;
+    sr.style.display='';
+  } else {
+    stopScroll();btn.textContent='▶ DÉFILE';btn.classList.remove('on');
+    btn.style.cssText='';sr.style.display='none';
+  }
+}
+
+// ── EVENTS ──
+$('btn-prev').onclick=()=>goTo(cur-1);
+$('btn-next').onclick=()=>goTo(cur+1);
+$('btn-lu').onclick=()=>moveLine(-1);
+$('btn-ld').onclick=()=>moveLine(1);
+$('btn-scroll').onclick=toggleScroll;
+$('btn-sm').onclick=()=>{fs=Math.max(16,fs-3);document.documentElement.style.setProperty('--fs',fs+'px');};
+$('btn-lg').onclick=()=>{fs=Math.min(54,fs+4);document.documentElement.style.setProperty('--fs',fs+'px');};
+$('btn-fs').onclick=()=>document.documentElement.requestFullscreen?.();
+$('speed-range').oninput=e=>{speed=+e.target.value;if(autoScroll){stopScroll();startScroll();}};
+$('obj-toggle').onclick=()=>{
+  objOpen=!objOpen;
+  $('obj-body').className=objOpen?'open':'';
+  $('obj-arr').textContent=objOpen?'▲':'▼';
+};
+
+document.addEventListener('keydown',e=>{
+  const tag=document.activeElement?.tagName;
+  if(tag==='INPUT')return;
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();goTo(cur+1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();goTo(cur-1);}
+  else if(e.key==='ArrowDown'){e.preventDefault();moveLine(1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();moveLine(-1);}
+  else if(e.key==='s')toggleScroll();
+  else if(e.key==='a')$('obj-toggle').click();
+  else if(e.key==='+'||e.key==='=')$('btn-lg').click();
+  else if(e.key==='-')$('btn-sm').click();
+  else if(e.key==='f')document.documentElement.requestFullscreen?.();
+  else if(e.key==='Escape')document.exitFullscreen?.().catch(()=>{});
+});
+
+render();
+</script>
+</body>
+</html>
